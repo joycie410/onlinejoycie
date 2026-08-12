@@ -1,0 +1,988 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Secret Maze - Also & Too Edition</title>
+    <style>
+        :root {
+            --primary: #4CAF50;
+            --primary-dark: #388E3C;
+            --secondary: #8BC34A;
+            --accent: #FFC107;
+            --bg-color: #E8F5E9;
+            --text-color: #2E7D32;
+            --wall-color: #1B5E20;
+            --path-color: #C8E6C9;
+            --font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            user-select: none;
+        }
+
+        body {
+            font-family: var(--font-family);
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            overflow: hidden;
+        }
+
+        #game-container {
+            width: 100%;
+            max-width: 600px;
+            height: 100vh;
+            max-height: 850px;
+            background: white;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.15);
+            position: relative;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            border-radius: 12px;
+        }
+
+        .screen {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+            text-align: center;
+            background: white;
+            z-index: 10;
+            overflow-y: auto;
+            transition: transform 0.4s ease-in-out;
+        }
+
+        .screen.hidden {
+            transform: translateY(-100%);
+        }
+
+        #start-screen {
+            background: linear-gradient(135deg, #C8E6C9 0%, #E8F5E9 100%);
+        }
+
+        #settings-screen {
+            background: #F1F8E9;
+            display: flex;
+            flex-direction: column;
+            justify-content: flex-start;
+            align-items: stretch;
+            text-align: left;
+        }
+
+        .settings-header {
+            text-align: center;
+            margin-bottom: 15px;
+            color: var(--wall-color);
+        }
+
+        .question-builder-container {
+            flex: 1;
+            overflow-y: auto;
+            padding: 5px;
+            margin-bottom: 15px;
+        }
+
+        .question-row {
+            background: white;
+            border: 2px solid var(--secondary);
+            border-radius: 10px;
+            padding: 12px;
+            margin-bottom: 15px;
+            position: relative;
+        }
+
+        .question-row h4 {
+            margin-bottom: 8px;
+            color: var(--primary-dark);
+            display: flex;
+            justify-content: space-between;
+        }
+
+        .remove-q-btn {
+            background: #FFCDD2;
+            color: #C62828;
+            border: none;
+            border-radius: 4px;
+            padding: 2px 8px;
+            cursor: pointer;
+            font-size: 0.8rem;
+            font-weight: bold;
+        }
+
+        .input-group {
+            margin-bottom: 8px;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .input-group label {
+            font-size: 0.85rem;
+            font-weight: 600;
+            margin-bottom: 3px;
+            color: #555;
+        }
+
+        .input-group input {
+            padding: 8px;
+            border: 1px solid #CCC;
+            border-radius: 6px;
+            font-family: inherit;
+            font-size: 0.9rem;
+        }
+
+        .input-group input:focus {
+            outline: none;
+            border-color: var(--primary);
+        }
+
+        .settings-actions {
+            display: flex;
+            gap: 10px;
+            justify-content: space-between;
+        }
+
+        .btn-secondary {
+            background: #78909C;
+            box-shadow: 0 4px 0 #455A64;
+        }
+
+        .title-container {
+            margin-bottom: 30px;
+            animation: bounce 2s infinite;
+        }
+
+        h1 {
+            font-size: 2.5rem;
+            color: var(--wall-color);
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.1);
+            margin-bottom: 5px;
+        }
+
+        .subtitle {
+            font-size: 1.1rem;
+            color: var(--primary-dark);
+            font-weight: bold;
+        }
+
+        .btn {
+            background: var(--primary);
+            color: white;
+            border: none;
+            padding: 12px 30px;
+            font-size: 1.2rem;
+            font-weight: bold;
+            border-radius: 50px;
+            cursor: pointer;
+            box-shadow: 0 5px 0 var(--primary-dark);
+            transition: all 0.1s ease;
+            text-align: center;
+        }
+
+        .btn:active {
+            transform: translateY(3px);
+            box-shadow: 0 2px 0 var(--primary-dark);
+        }
+
+        #hud {
+            padding: 15px;
+            background: var(--primary);
+            color: white;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-weight: bold;
+            font-size: 1.1rem;
+            z-index: 5;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        }
+
+        .hud-item {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+
+        #progress-bar-container {
+            width: 100%;
+            height: 8px;
+            background: #E0E0E0;
+            z-index: 5;
+        }
+
+        #progress-bar {
+            height: 100%;
+            width: 0%;
+            background: var(--accent);
+            transition: width 0.3s ease;
+        }
+
+        #main-content {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: space-between;
+            padding: 15px;
+            background: #FAFAFA;
+            position: relative;
+        }
+
+        #question-box {
+            background: white;
+            border: 3px solid var(--secondary);
+            border-radius: 15px;
+            padding: 15px;
+            width: 100%;
+            text-align: center;
+            font-size: 1.2rem;
+            font-weight: 600;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.05);
+            min-height: 80px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .blank {
+            color: #D32F2F;
+            border-bottom: 3px dashed #D32F2F;
+            padding: 0 10px;
+            font-weight: bold;
+        }
+
+        #maze-view-container {
+            width: 320px;
+            height: 320px;
+            position: relative;
+            margin: 10px 0;
+            border-radius: 15px;
+            overflow: hidden;
+            border: 8px solid var(--wall-color);
+            background: var(--path-color);
+            box-shadow: inset 0 0 20px rgba(0,0,0,0.2);
+        }
+
+        #maze-grid {
+            display: grid;
+            width: 100%;
+            height: 100%;
+        }
+
+        .cell {
+            width: 100%;
+            height: 100%;
+            position: relative;
+        }
+
+        .wall {
+            background-color: var(--wall-color);
+            background-image: radial-gradient(#2E7D32 20%, transparent 20%), radial-gradient(#2E7D32 20%, transparent 20%);
+            background-size: 8px 8px;
+            background-position: 0 0, 4px 4px;
+        }
+
+        .path {
+            background-color: var(--path-color);
+        }
+
+        #player {
+            width: 70%;
+            height: 70%;
+            position: absolute;
+            top: 15%;
+            left: 15%;
+            z-index: 4;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.4rem;
+        }
+
+        .gate {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            font-size: 1rem;
+            color: white;
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            z-index: 2;
+            border-radius: 4px;
+        }
+        
+        .gate-A { background: #E53935; }
+        .gate-B { background: #1E88E5; }
+        .gate-C { background: #8E24AA; }
+
+        #controls {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            grid-template-rows: repeat(2, 1fr);
+            gap: 10px;
+            width: 220px;
+            margin-bottom: 5px;
+        }
+
+        .ctrl-btn {
+            background: #DFE0E0;
+            border: none;
+            border-radius: 12px;
+            font-size: 1.5rem;
+            padding: 12px;
+            cursor: pointer;
+            box-shadow: 0 4px 0 #B6B7B7;
+            color: #424242;
+        }
+
+        .ctrl-btn:active {
+            transform: translateY(2px);
+            box-shadow: 0 2px 0 #B6B7B7;
+        }
+
+        #up-btn { grid-column: 2; }
+        #left-btn { grid-column: 1; grid-row: 2; }
+        #down-btn { grid-column: 2; grid-row: 2; }
+        #right-btn { grid-column: 3; grid-row: 2; }
+
+        #options-panel {
+            width: 100%;
+            display: flex;
+            justify-content: space-around;
+            background: #E8F5E9;
+            padding: 8px;
+            border-radius: 10px;
+            border: 2px solid var(--secondary);
+        }
+
+        .option-indicator {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-weight: bold;
+            font-size: 1rem;
+        }
+
+        .badge {
+            width: 24px;
+            height: 24px;
+            border-radius: 50%;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 0.8rem;
+        }
+
+        #feedback-overlay {
+            position: absolute;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.6);
+            z-index: 20;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.3s ease;
+        }
+
+        #feedback-overlay.show {
+            opacity: 1;
+            pointer-events: auto;
+        }
+
+        #feedback-card {
+            background: white;
+            border-radius: 20px;
+            padding: 30px;
+            width: 85%;
+            max-width: 400px;
+            text-align: center;
+            transform: scale(0.7);
+            transition: transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            box-shadow: 0 10px 25px rgba(0,0,0,0.3);
+        }
+
+        #feedback-overlay.show #feedback-card {
+            transform: scale(1);
+        }
+
+        #feedback-emoji {
+            font-size: 4rem;
+            margin-bottom: 15px;
+        }
+
+        #feedback-title {
+            font-size: 1.8rem;
+            font-weight: bold;
+            margin-bottom: 10px;
+        }
+
+        #feedback-msg {
+            font-size: 1.1rem;
+            margin-bottom: 25px;
+            color: #555;
+        }
+
+        .stars {
+            font-size: 3rem;
+            margin: 20px 0;
+            color: var(--accent);
+        }
+
+        .score-report {
+            font-size: 1.4rem;
+            margin-bottom: 30px;
+            font-weight: 600;
+        }
+
+        .confetti {
+            position: absolute;
+            width: 10px;
+            height: 10px;
+            background-color: #f00;
+            border-radius: 50%;
+            animation: fall 3s linear infinite;
+            z-index: 15;
+        }
+
+        @keyframes fall {
+            0% { transform: translateY(-10px) rotate(0deg); top: 0; }
+            100% { transform: translateY(100vh) rotate(360deg); top: 100%; }
+        }
+
+        @keyframes bounce {
+            0%, 100% { transform: translateY(0); }
+            50% { transform: translateY(-10px); }
+        }
+    </style>
+</head>
+<body>
+
+<div id="game-container">
+
+    <!-- START SCREEN -->
+    <div id="start-screen" class="screen">
+        <div class="title-container">
+            <h1>Secret Maze 🌿</h1>
+            <div class="subtitle">Also & Too Edition</div>
+        </div>
+        <p style="margin-bottom: 30px; font-size: 1.1rem; max-width: 80%; line-height: 1.5;">
+            Master the usage of "also" and "too" while exploring the secret paths. Customize the questions anytime!
+        </p>
+        <div style="display: flex; flex-direction: column; gap: 12px; width: 70%;">
+            <button class="btn" onclick="startGame(false)">Play Default Game</button>
+            <button class="btn btn-secondary" onclick="openSettings()">Custom Content Creator</button>
+        </div>
+    </div>
+
+    <!-- SETTINGS / CREATOR SCREEN -->
+    <div id="settings-screen" class="screen hidden">
+        <div class="settings-header">
+            <h2>⚙️ Question Creator</h2>
+            <p style="font-size: 0.85rem; color: #666;">Use <b>???</b> to mark where the blank space answer should appear.</p>
+        </div>
+        
+        <div class="question-builder-container" id="question-builder">
+            <!-- Dynamic rows injection -->
+        </div>
+
+        <div class="settings-actions">
+            <button class="btn btn-secondary" style="font-size: 1rem; padding: 10px 15px;" onclick="addNewQuestionRow()">+ Add Row</button>
+            <button class="btn" style="font-size: 1rem; padding: 10px 25px;" onclick="startGame(true)">Launch Game 🚀</button>
+        </div>
+    </div>
+
+    <!-- HUD -->
+    <div id="hud">
+        <div class="hud-item"><span>Level:</span> <span id="level-txt">1/10</span></div>
+        <div class="hud-item"><span>Score:</span> <span id="score-txt">0</span></div>
+        <div class="hud-item"><span>Lives:</span> <span id="lives-txt">❤️❤️❤️</span></div>
+    </div>
+    <div id="progress-bar-container">
+        <div id="progress-bar"></div>
+    </div>
+
+    <!-- MAIN GAMEPLAY -->
+    <div id="main-content">
+        <div id="question-box">
+            Loading question...
+        </div>
+
+        <!-- Options Guide Bar -->
+        <div id="options-panel">
+            <div class="option-indicator"><span class="badge gate-A">A</span> <span id="optA-txt">-</span></div>
+            <div class="option-indicator"><span class="badge gate-B">B</span> <span id="optB-txt">-</span></div>
+            <div class="option-indicator"><span class="badge gate-C">C</span> <span id="optC-txt">-</span></div>
+        </div>
+
+        <!-- Maze View -->
+        <div id="maze-view-container">
+            <div id="maze-grid"></div>
+        </div>
+
+        <!-- Directional Controls -->
+        <div id="controls">
+            <button class="ctrl-btn" id="up-btn">▲</button>
+            <button class="ctrl-btn" id="left-btn">◀</button>
+            <button class="ctrl-btn" id="down-btn">▼</button>
+            <button class="ctrl-btn" id="right-btn">▶</button>
+        </div>
+    </div>
+
+    <!-- FEEDBACK OVERLAY -->
+    <div id="feedback-overlay">
+        <div id="feedback-card">
+            <div id="feedback-emoji">🤩</div>
+            <div id="feedback-title">Correct!</div>
+            <div id="feedback-msg">Great job!</div>
+            <button class="btn" id="feedback-btn">Next Level</button>
+        </div>
+    </div>
+
+    <!-- END SCREEN -->
+    <div id="end-screen" class="screen hidden">
+        <h1 id="end-title">Congratulations! 🏆</h1>
+        <div class="stars" id="end-stars">⭐⭐⭐</div>
+        <p class="score-report" id="end-report">You scored 1000 points!</p>
+        <button class="btn" onclick="restartGame()">Play Again</button>
+    </div>
+
+</div>
+
+<script>
+    // New Default Bank targeting "also" and "too"
+    const defaultQuestions = [
+        { q: "She loves playing the piano, and she <span class='blank'>???</span> likes singing.", answer: "also", distractor1: "too", distractor2: "either" },
+        { q: "I am going to the park, and my little brother wants to come <span class='blank'>???</span>.", answer: "too", distractor1: "also", distractor2: "so" },
+        { q: "He speaks English fluently. He can <span class='blank'>???</span> speak French.", answer: "also", distractor1: "too", distractor2: "either" },
+        { q: "Max likes eating apples, and he likes bananas <span class='blank'>???</span>.", answer: "too", distractor1: "also", distractor2: "very" },
+        { q: "They have a big dog, and they <span class='blank'>???</span> have two cats.", answer: "also", distractor1: "too", distractor2: "as well" },
+        { q: "My sister passed the exam, and I passed <span class='blank'>???</span>!", answer: "too", distractor1: "also", distractor2: "either" },
+        { q: "We visited the museum, and we <span class='blank'>???</span> went to the zoo.", answer: "also", distractor1: "too", distractor2: "so" },
+        { q: "This puzzle is easy, and that one is simple <span class='blank'>???</span>.", answer: "too", distractor1: "also", distractor2: "either" },
+        { q: "I bought a new book, and I <span class='blank'>???</span> bought a colorful notebook.", answer: "also", distractor1: "too", distractor2: "to" },
+        { q: "Liam wants to be a doctor, and Emma wants to be one <span class='blank'>???</span>.", answer: "too", distractor1: "also", distractor2: "well" }
+    ];
+
+    let activeQuestionsPool = [];
+
+    // Core layout container 5x5
+    const baseMap = {
+        size: 5,
+        playerStart: {r: 2, c: 2},
+        grid: [
+            [1, 1, 'E', 1, 1],
+            [1, 1,  1,  1, 1], 
+            ['A', 0, 'P', 0, 'B'],
+            [1, 1, 'C', 1, 1],
+            [1, 1,  1,  1, 1]
+        ]
+    };
+
+    let currentLevel = 0;
+    let score = 0;
+    let lives = 3;
+    let playerPos = { r: 2, c: 2 };
+    let activeGrid = [];
+    let mazeSize = 5;
+    let isMenuOverlayOpen = false;
+    let activeLevelQuestion = {};
+
+    window.onload = () => {
+        setupControls();
+        initializeBuilderWithDefaults();
+    };
+
+    function initializeBuilderWithDefaults() {
+        const container = document.getElementById('question-builder');
+        container.innerHTML = '';
+        const initialSamples = defaultQuestions.slice(0, 4);
+        initialSamples.forEach((item, index) => {
+            createRowDOM(item.q.replace("<span class='blank'>???</span>", "???"), item.answer, item.distractor1, item.distractor2, index + 1);
+        });
+    }
+
+    function createRowDOM(qVal, ansVal, dist1, dist2, index) {
+        const container = document.getElementById('question-builder');
+        const row = document.createElement('div');
+        row.className = 'question-row';
+        row.id = `q-row-${index}`;
+        row.innerHTML = `
+            <h4>Question ${index} <button class="remove-q-btn" onclick="this.parentElement.parentElement.remove()">Remove</button></h4>
+            <div class="input-group">
+                <label>Sentence Text (use ??? for blank):</label>
+                <input type="text" class="q-sentence" value="${qVal}" placeholder="Example: She likes apples and bananas ???">
+            </div>
+            <div class="input-group">
+                <label>Correct Answer:</label>
+                <input type="text" class="q-answer" value="${ansVal}" placeholder="also / too">
+            </div>
+            <div class="input-group">
+                <label>Wrong Distractor 1:</label>
+                <input type="text" class="q-dist1" value="${dist1}" placeholder="Wrong option 1">
+            </div>
+            <div class="input-group">
+                <label>Wrong Distractor 2:</label>
+                <input type="text" class="q-dist2" value="${dist2}" placeholder="Wrong option 2">
+            </div>
+        `;
+        container.appendChild(row);
+    }
+
+    function addNewQuestionRow() {
+        const currentCount = document.querySelectorAll('.question-row').length;
+        createRowDOM("", "", "", "", currentCount + 1);
+        const container = document.getElementById('question-builder');
+        container.scrollTop = container.scrollHeight;
+    }
+
+    function openSettings() {
+        document.getElementById('settings-screen').classList.remove('hidden');
+    }
+
+    function startGame(useCustom) {
+        if (useCustom) {
+            const rows = document.querySelectorAll('.question-row');
+            let loadedCustom = [];
+            rows.forEach(row => {
+                let sentence = row.querySelector('.q-sentence').value;
+                let correct = row.querySelector('.q-answer').value;
+                let d1 = row.querySelector('.q-dist1').value;
+                let d2 = row.querySelector('.q-dist2').value;
+
+                if (sentence.trim() !== "" && correct.trim() !== "") {
+                    if(!sentence.includes("???")) {
+                        sentence += " ???";
+                    }
+                    let finalizedSentence = sentence.replace("???", "<span class='blank'>???</span>");
+                    loadedCustom.push({
+                        q: finalizedSentence,
+                        answer: correct,
+                        distractor1: d1 || "either",
+                        distractor2: d2 || "so"
+                    });
+                }
+            });
+
+            if(loadedCustom.length === 0) {
+                alert("Please fill out at least one full question before launching!");
+                return;
+            }
+            activeQuestionsPool = loadedCustom;
+        } else {
+            activeQuestionsPool = defaultQuestions;
+        }
+
+        document.getElementById('start-screen').classList.add('hidden');
+        document.getElementById('settings-screen').classList.add('hidden');
+        currentLevel = 0;
+        score = 0;
+        lives = 3;
+        loadLevel();
+    }
+
+    function loadLevel() {
+        isMenuOverlayOpen = false;
+        document.getElementById('level-txt').innerText = `${currentLevel + 1}/${activeQuestionsPool.length}`;
+        document.getElementById('score-txt').innerText = score;
+        updateLivesUI();
+        
+        const percent = (currentLevel / activeQuestionsPool.length) * 100;
+        document.getElementById('progress-bar').style.width = `${percent}%`;
+
+        const rawItem = activeQuestionsPool[currentLevel];
+        let pool = [rawItem.answer, rawItem.distractor1, rawItem.distractor2];
+        
+        for (let i = pool.length - 1; i > 0; i--) {
+            const j = Math.floor(Math.random() * (i + 1));
+            let temp = pool[i];
+            pool[i] = pool[j];
+            pool[j] = temp;
+        }
+
+        let correctLetter = "A";
+        if (pool[1] === rawItem.answer) correctLetter = "B";
+        if (pool[2] === rawItem.answer) correctLetter = "C";
+
+        activeLevelQuestion = {
+            q: rawItem.q,
+            ansTxt: rawItem.answer,
+            options: pool,
+            correctLetter: correctLetter
+        };
+
+        document.getElementById('question-box').innerHTML = activeLevelQuestion.q;
+        document.getElementById('optA-txt').innerText = activeLevelQuestion.options[0];
+        document.getElementById('optB-txt').innerText = activeLevelQuestion.options[1];
+        document.getElementById('optC-txt').innerText = activeLevelQuestion.options[2];
+
+        mazeSize = baseMap.size;
+        activeGrid = JSON.parse(JSON.stringify(baseMap.grid));
+        
+        playerPos = { r: baseMap.playerStart.r, c: baseMap.playerStart.c };
+        activeGrid[playerPos.r][playerPos.c] = 0; 
+
+        buildMazeDOM();
+    }
+
+    function buildMazeDOM() {
+        const gridContainer = document.getElementById('maze-grid');
+        gridContainer.style.gridTemplateColumns = `repeat(${mazeSize}, 1fr)`;
+        gridContainer.style.gridTemplateRows = `repeat(${mazeSize}, 1fr)`;
+        gridContainer.innerHTML = '';
+
+        for (let r = 0; r < mazeSize; r++) {
+            for (let c = 0; c < mazeSize; c++) {
+                const cellVal = activeGrid[r][c];
+                const cellEl = document.createElement('div');
+                cellEl.id = `cell-${r}-${c}`;
+                cellEl.className = 'cell';
+
+                if (cellVal === 1) {
+                    cellEl.classList.add('wall');
+                } else {
+                    cellEl.classList.add('path');
+                    
+                    if (['A', 'B', 'C'].includes(cellVal)) {
+                        const gate = document.createElement('div');
+                        gate.className = `gate gate-${cellVal}`;
+                        gate.innerText = cellVal;
+                        cellEl.appendChild(gate);
+                    } else if (cellVal === 'E') {
+                        cellEl.innerText = '🏁';
+                        cellEl.style.display = 'flex';
+                        cellEl.style.alignItems = 'center';
+                        cellEl.style.justifyContent = 'center';
+                        cellEl.style.fontSize = '1.3rem';
+                    }
+                }
+                gridContainer.appendChild(cellEl);
+            }
+        }
+        renderPlayer();
+    }
+
+    UX_AUDIO_CONTEXT = null;
+    function playTone(freq, type, duration) {
+        try {
+            if(!UX_AUDIO_CONTEXT) UX_AUDIO_CONTEXT = new (window.AudioContext || window.webkitAudioContext)();
+            let osc = UX_AUDIO_CONTEXT.createOscillator();
+            let gain = UX_AUDIO_CONTEXT.createGain();
+            osc.type = type;
+            osc.frequency.value = freq;
+            osc.connect(gain);
+            gain.connect(UX_AUDIO_CONTEXT.destination);
+            osc.start();
+            gain.gain.setValueAtTime(0.3, UX_AUDIO_CONTEXT.currentTime);
+            gain.gain.exponentialRampToValueAtTime(0.01, UX_AUDIO_CONTEXT.currentTime + duration);
+            osc.stop(UX_AUDIO_CONTEXT.currentTime + duration);
+        } catch(e){}
+    }
+
+    function renderPlayer() {
+        const existingPlayer = document.getElementById('player');
+        if (existingPlayer) existingPlayer.remove();
+
+        const targetCell = document.getElementById(`cell-${playerPos.r}-${playerPos.c}`);
+        if (targetCell) {
+            const playerEl = document.createElement('div');
+            playerEl.id = 'player';
+            playerEl.innerText = '🤠';
+            targetCell.appendChild(playerEl);
+        }
+    }
+
+    function setupControls() {
+        const move = (dr, dc) => {
+            if (isMenuOverlayOpen) return;
+            
+            let nr = playerPos.r + dr;
+            let nc = playerPos.c + dc;
+
+            if (nr >= 0 && nr < mazeSize && nc >= 0 && nc < mazeSize) {
+                let cellVal = activeGrid[nr][nc];
+
+                if (['A', 'B', 'C'].includes(cellVal)) {
+                    handleChoice(cellVal, nr, nc);
+                    return;
+                }
+
+                if (cellVal === 1) return;
+
+                if (cellVal === 0 || cellVal === 'E') {
+                    playerPos = { r: nr, c: nc };
+                    renderPlayer();
+                    playTone(350, 'triangle', 0.05);
+                    
+                    if (cellVal === 'E') {
+                        checkWinCondition();
+                    }
+                }
+            }
+        };
+
+        document.getElementById('up-btn').onclick = () => move(-1, 0);
+        document.getElementById('down-btn').onclick = () => move(1, 0);
+        document.getElementById('left-btn').onclick = () => move(0, -1);
+        document.getElementById('right-btn').onclick = () => move(0, 1);
+
+        window.addEventListener('keydown', (e) => {
+            if (e.key === 'ArrowUp' || e.key.toLowerCase() === 'w') move(-1, 0);
+            if (e.key === 'ArrowDown' || e.key.toLowerCase() === 's') move(1, 0);
+            if (e.key === 'ArrowLeft' || e.key.toLowerCase() === 'a') move(0, -1);
+            if (e.key === 'ArrowRight' || e.key.toLowerCase() === 'd') move(0, 1);
+        });
+    }
+
+    function handleChoice(choice, r, c) {
+        if (choice === activeLevelQuestion.correctLetter) {
+            score += 100;
+            document.getElementById('score-txt').innerText = score;
+            document.getElementById('question-box').innerHTML = activeLevelQuestion.q.replace("???", `<span style='color: #2E7D32;'>${activeLevelQuestion.ansTxt}</span>`);
+
+            activeGrid[r][c] = 0;
+            activeGrid[1][2] = 0; 
+            
+            const gateEl = document.getElementById(`cell-${r}-${c}`).querySelector('.gate');
+            if (gateEl) gateEl.remove();
+
+            const topTunnelCell = document.getElementById('cell-1-2');
+            if (topTunnelCell) {
+                topTunnelCell.className = 'cell path';
+            }
+            
+            playerPos = { r, c };
+            renderPlayer();
+            playTone(600, 'sine', 0.2);
+
+            showFeedback(true);
+        } else {
+            lives--;
+            updateLivesUI();
+            playTone(180, 'sawtooth', 0.3);
+            showFeedback(false);
+
+            if (lives <= 0) {
+                endGame(false);
+            }
+        }
+    }
+
+    function handleWrongGateLockedPushback() {
+        playerPos = {r: 2, c: 2};
+        renderPlayer();
+    }
+
+    function checkWinCondition() {
+        if (currentLevel >= activeQuestionsPool.length - 1) {
+            endGame(true);
+        } else {
+            currentLevel++;
+            loadLevel();
+        }
+    }
+
+    function showFeedback(isCorrect) {
+        isMenuOverlayOpen = true;
+        const overlay = document.getElementById('feedback-overlay');
+        const emoji = document.getElementById('feedback-emoji');
+        const title = document.getElementById('feedback-title');
+        const msg = document.getElementById('feedback-msg');
+        const btn = document.getElementById('feedback-btn');
+
+        if (isCorrect) {
+            emoji.innerText = "🌟";
+            title.innerText = "Correct Gate!";
+            msg.innerText = `Excellent! You successfully completed the sentence with "${activeLevelQuestion.ansTxt}". The top exit gate 🏁 is now open!`;
+            btn.innerText = "Continue Exploration";
+            btn.onclick = () => {
+                overlay.classList.remove('show');
+                isMenuOverlayOpen = false;
+            };
+        } else {
+            emoji.innerText = "🔒";
+            title.innerText = "Locked Path!";
+            msg.innerText = "Oops! That word placement is grammatically incorrect. Try another gate choice!";
+            btn.innerText = "Try Again";
+            btn.onclick = () => {
+                overlay.classList.remove('show');
+                isMenuOverlayOpen = false;
+                handleWrongGateLockedPushback();
+            };
+        }
+
+        overlay.classList.add('show');
+    }
+
+    function updateLivesUI() {
+        let heartString = '';
+        for (let i = 0; i < 3; i++) {
+            heartString += i < lives ? '❤️' : '🖤';
+        }
+        document.getElementById('lives-txt').innerText = heartString;
+    }
+
+    function endGame(isWin) {
+        document.getElementById('feedback-overlay').classList.remove('show');
+        const endScreen = document.getElementById('end-screen');
+        const endTitle = document.getElementById('end-title');
+        const endStars = document.getElementById('end-stars');
+        const endReport = document.getElementById('end-report');
+
+        isMenuOverlayOpen = true;
+
+        if (isWin) {
+            endTitle.innerText = "Maze Mastered! 🌳";
+            endReport.innerText = `Excellent grammar work! Final Score: ${score} points!`;
+            if (lives === 3) endStars.innerText = "⭐⭐⭐";
+            else if (lives === 2) endStars.innerText = "⭐⭐";
+            else endStars.innerText = "⭐";
+            triggerConfetti();
+        } else {
+            endTitle.innerText = "Game Over! 🍂";
+            endStars.innerText = "❌";
+            endReport.innerText = `Keep learning! Final Score: ${score}`;
+        }
+
+        endScreen.classList.remove('hidden');
+    }
+
+    function restartGame() {
+        document.getElementById('end-screen').classList.add('hidden');
+        document.getElementById('start-screen').classList.remove('hidden');
+    }
+
+    function triggerConfetti() {
+        for (let i = 0; i < 80; i++) {
+            const confetti = document.createElement('div');
+            confetti.classList.add('confetti');
+            confetti.style.left = Math.random() * 100 + 'vw';
+            confetti.style.animationDelay = Math.random() * 2 + 's';
+            confetti.style.backgroundColor = `hsl(${Math.random() * 360}, 100%, 50%)`;
+            document.body.appendChild(confetti);
+            setTimeout(() => confetti.remove(), 4000);
+        }
+    }
+</script>
+
+</body>
+</html>
